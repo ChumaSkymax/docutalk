@@ -5,7 +5,6 @@ import { getAllBooks } from "@/lib/actions/book.actions";
 const HomePage = async () => {
   const bookResults = await getAllBooks();
   const books = bookResults.success ? (bookResults.books ?? []) : [];
-  console.log(books);
   return (
     <main className="wrapper container">
       <HeroSection />
