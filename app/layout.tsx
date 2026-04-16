@@ -3,6 +3,7 @@ import "./globals.css";
 import { IBM_Plex_Serif, Mona_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "@/components/web/Navbar";
+import { Toaster } from "@/components/ui/sonner";
 
 const ibmPlexSerif = IBM_Plex_Serif({
   subsets: ["latin"],
@@ -36,6 +37,7 @@ export default function RootLayout({
         <ClerkProvider>
           <Navbar />
           {children}
+          <Toaster richColors position="top-right" />
         </ClerkProvider>
       </body>
     </html>
