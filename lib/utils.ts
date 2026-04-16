@@ -104,9 +104,17 @@ export async function parsePDFFile(file: File) {
     // Read file as array buffer
     const arrayBuffer = await file.arrayBuffer();
 
+export async function parsePDFFile(file: File) {
+  let pdfDocument: Awaited<
+    ReturnType<Awaited<ReturnType<typeof import("pdfjs-dist")>["getDocument"]>["promise"]>
+  > | null = null;
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    const arrayBuffer = await file.arrayBuffer();
+
     // Load PDF document
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdfDocument = await loadingTask.promise;
+    pdfDocument = await loadingTask.promise;
 
     // Render first page as cover image
     const firstPage = await pdfDocument.getPage(1);
@@ -146,8 +154,21 @@ export async function parsePDFFile(file: File) {
     // Split text into segments for search
     const segments = splitIntoSegments(fullText);
 
-    // Clean up PDF document resources
-    await pdfDocument.destroy();
+    return {
+      content: segments,
+      cover: coverDataURL,
+    };
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    throw new Error(
+      `Failed to parse PDF file: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    if (pdfDocument) {
+      await pdfDocument.destroy();
+    }
+  }
+}
 
     return {
       content: segments,
