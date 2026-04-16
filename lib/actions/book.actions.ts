@@ -1,5 +1,6 @@
 "use server";
 
+import { del } from "@vercel/blob";
 import { CreateBook, TextSegment } from "@/types";
 import { connectToDatabase } from "@/database/mongoose";
 import Book from "@/database/models/book.model";
@@ -72,12 +73,61 @@ export const createBook = async (data: CreateBook) => {
       data: serializeData(newBook.toObject()),
     };
   } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: number }).code === 11000
+    ) {
+      const slug = generateSlug(data.title);
+      const existing = await Book.findOne({ slug }).lean();
+      if (existing) {
+        return {
+          success: true,
+          alreadyExists: true,
+          data: serializeData(existing),
+        };
+      }
+    }
+
     console.error("Error creating book", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+};
+
+export const deleteBlobs = async (blobKeys: string[]) => {
+  const keys = blobKeys.filter((k): k is string => Boolean(k));
+  try {
+    await Promise.all(
+      keys.map((key) =>
+        del(key, { token: process.env.DOCUTALK_READ_WRITE_TOKEN }),
+      ),
+    );
+    return { success: true };
+  } catch (e) {
+    console.error("Error deleting blobs", e);
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : "Unknown error",
+    };
+  }
+};
+
+export const cleanupFailedBook = async (
+  bookId: string,
+  blobKeys: string[],
+) => {
+  try {
+    await connectToDatabase();
+    await BookSegment.deleteMany({ bookId });
+    await Book.findByIdAndDelete(bookId);
+  } catch (e) {
+    console.error("Error deleting failed book record", e);
+  }
+  return deleteBlobs(blobKeys);
 };
 
 export const saveBookSegments = async (

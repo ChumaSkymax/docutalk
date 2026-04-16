@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { auth } from "@clerk/nextjs/server";
-import { MAX_FILE_SIZE } from "@/lib/constants";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_PDF_TYPES,
+  MAX_FILE_SIZE,
+} from "@/lib/constants";
+
+const ALLOWED_MIME_TYPES = new Set<string>([
+  ...ACCEPTED_PDF_TYPES,
+  ...ACCEPTED_IMAGE_TYPES,
+]);
+
+const EXTENSION_TO_MIME: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -25,10 +42,23 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "File too large" }, { status: 413 });
     }
 
+    let resolvedType = file.type;
+    if (!resolvedType) {
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+      resolvedType = EXTENSION_TO_MIME[ext] ?? "";
+    }
+
+    if (!ALLOWED_MIME_TYPES.has(resolvedType)) {
+      return NextResponse.json(
+        { error: "Unsupported file type" },
+        { status: 415 },
+      );
+    }
+
     const blob = await put(filename, file, {
       access: "public",
       addRandomSuffix: true,
-      contentType: file.type,
+      contentType: resolvedType,
       token: process.env.DOCUTALK_READ_WRITE_TOKEN,
     });
 

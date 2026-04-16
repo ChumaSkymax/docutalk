@@ -47,7 +47,9 @@ import { toast } from "sonner";
 // Backend actions
 import {
   checkBookExists,
+  cleanupFailedBook,
   createBook,
+  deleteBlobs,
   saveBookSegments,
 } from "@/lib/actions/book.actions";
 
@@ -152,6 +154,7 @@ const UploadForm = () => {
       }
 
       let coverUrl: string;
+      let coverBlobKey: string;
 
       // If user uploaded cover image
       if (data.coverImage) {
@@ -164,9 +167,11 @@ const UploadForm = () => {
             coverFile,
           );
           coverUrl = uploadedCoverBlob.url;
+          coverBlobKey = uploadedCoverBlob.pathname;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           toast.error(`Cover image upload failed: ${msg}`);
+          await deleteBlobs([uploadedPdfBlob.pathname]);
           return;
         }
       } else {
@@ -180,9 +185,11 @@ const UploadForm = () => {
             blob,
           );
           coverUrl = uploadedCoverBlob.url;
+          coverBlobKey = uploadedCoverBlob.pathname;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           toast.error(`Auto-generated cover upload failed: ${msg}`);
+          await deleteBlobs([uploadedPdfBlob.pathname]);
           return;
         }
       }
@@ -196,18 +203,21 @@ const UploadForm = () => {
         fileURL: uploadedPdfBlob.url,
         fileBlobKey: uploadedPdfBlob.pathname,
         coverURL: coverUrl,
+        coverBlobKey,
         fileSize: pdfFile.size,
       });
 
       // If creation failed
       if (!book.success) {
         toast.error(`Failed to create book: ${book.error ?? "Unknown error"}`);
+        await deleteBlobs([uploadedPdfBlob.pathname, coverBlobKey]);
         return;
       }
 
-      // If book already exists (edge case)
+      // If book already exists (edge case — duplicate-key race)
       if (book.alreadyExists) {
         toast.info("Book already exists");
+        await deleteBlobs([uploadedPdfBlob.pathname, coverBlobKey]);
         form.reset();
         router.push(`/books/${book.data.slug}`);
         return;
@@ -220,11 +230,15 @@ const UploadForm = () => {
         parsedPDF.content,
       );
 
-      // If saving segments failed
+      // If saving segments failed → roll back the book record and blobs
       if (!segments.success) {
         toast.error(
           `Failed to save segments: ${segments.error ?? "Unknown error"}`,
         );
+        await cleanupFailedBook(book.data._id, [
+          uploadedPdfBlob.pathname,
+          coverBlobKey,
+        ]);
         return;
       }
 
