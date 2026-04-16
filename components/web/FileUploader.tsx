@@ -5,13 +5,6 @@ import { useController, FieldValues } from "react-hook-form";
 import { X } from "lucide-react";
 import { FileUploadFieldProps } from "@/types";
 import { cn } from "@/lib/utils";
-import {
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-
 const FileUploader = <T extends FieldValues>({
   control,
   name,
@@ -24,6 +17,7 @@ const FileUploader = <T extends FieldValues>({
 }: FileUploadFieldProps<T>) => {
   const {
     field: { onChange, value },
+    fieldState: { error },
   } = useController({ name, control });
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +35,7 @@ const FileUploader = <T extends FieldValues>({
   const onRemove = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onChange(null);
+      onChange(undefined);
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -52,9 +46,11 @@ const FileUploader = <T extends FieldValues>({
   const isUploaded = !!value;
 
   return (
-    <FormItem className="w-full">
-      <FormLabel className="form-label">{label}</FormLabel>
-      <FormControl>
+    <div className="w-full space-y-2">
+      <label className="form-label text-sm font-medium leading-none">
+        {label}
+      </label>
+      <div>
         <div
           className={cn(
             "upload-dropzone border-2 border-dashed border-[#8B7355]/20",
@@ -92,9 +88,13 @@ const FileUploader = <T extends FieldValues>({
             </>
           )}
         </div>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
+      </div>
+      {error?.message && (
+        <p className="text-sm font-medium text-destructive">
+          {String(error.message)}
+        </p>
+      )}
+    </div>
   );
 };
 

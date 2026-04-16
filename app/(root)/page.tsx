@@ -1,16 +1,17 @@
-"use client";
-
 import BookCard from "@/components/web/BookCard";
 import HeroSection from "@/components/web/HeroSection";
-import { sampleBooks } from "@/lib/constants";
+import { getAllBooks } from "@/lib/actions/book.actions";
 
-const HomePage = () => {
+const HomePage = async () => {
+  const bookResults = await getAllBooks();
+  const books = bookResults.success ? (bookResults.books ?? []) : [];
+  console.log(books);
   return (
     <main className="wrapper container">
       <HeroSection />
 
       <div className="library-books-grid">
-        {sampleBooks.map((book) => (
+        {books.map((book) => (
           <BookCard
             key={book._id}
             title={book.title}
