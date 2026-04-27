@@ -68,7 +68,9 @@ async function uploadFile(
   fd.append("filename", filename);
   const res = await fetch("/api/upload", { method: "POST", body: fd });
   if (!res.ok) {
-    const { error } = await res.json().catch(() => ({ error: "Upload failed" }));
+    const { error } = await res
+      .json()
+      .catch(() => ({ error: "Upload failed" }));
     throw new Error(error ?? "Upload failed");
   }
   return res.json();
@@ -189,7 +191,7 @@ const UploadForm = () => {
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           toast.error(`Auto-generated cover upload failed: ${msg}`);
-          await deleteBlobs([uploadedPdfBlob.pathname]);
+          await deleteBlobs([uploadedPdfBlob.pathname]); // delete pdf if cover upload fails
           return;
         }
       }
@@ -252,7 +254,6 @@ const UploadForm = () => {
       setIsSubmitting(false); // stop loading
     }
   };
-
 
   return (
     <>

@@ -1,5 +1,4 @@
 import { Brain, Ear, Mic, Search, Speaker, Upload } from "lucide-react";
-import React from "react";
 
 const HeroSection = () => {
   return (
