@@ -41,27 +41,28 @@ export const splitIntoSegments = (
     throw new Error("overlapSize must be >= 0 and < segmentSize");
   }
 
-  const words = text.split(/\s+/).filter((word) => word.length > 0);
-  const segments: TextSegment[] = [];
+  const words = text.split(/\s+/).filter((word) => word.length > 0); //SPLIT TEXT INTO WORDS -convert text to array of words eg ["Hello", "world", "AI"]
+  const segments: TextSegment[] = []; //Create an empty array to store the segments
 
-  let segmentIndex = 0;
-  let startIndex = 0;
+  let segmentIndex = 0; //Initialize the segment index
+  let startIndex = 0; //Initialize the start index
 
   while (startIndex < words.length) {
-    const endIndex = Math.min(startIndex + segmentSize, words.length);
-    const segmentWords = words.slice(startIndex, endIndex);
-    const segmentText = segmentWords.join(" ");
+    //Loop through the words
+    const endIndex = Math.min(startIndex + segmentSize, words.length); //Calculate the end index
+    const segmentWords = words.slice(startIndex, endIndex); //Slice the words to create a segment
+    const segmentText = segmentWords.join(" "); //Join the words to create a segment
 
     segments.push({
       text: segmentText,
       segmentIndex,
       wordCount: segmentWords.length,
-    });
+    }); //Push the segment to the segments array
 
-    segmentIndex++;
+    segmentIndex++; //Increment the segment index
 
-    if (endIndex >= words.length) break;
-    startIndex = endIndex - overlapSize;
+    if (endIndex >= words.length) break; //Break the loop if the end index is greater than or equal to the number of words
+    startIndex = endIndex - overlapSize; //Set the start index to the end index minus the overlap size
   }
 
   return segments;
@@ -92,9 +93,10 @@ export const formatDuration = (seconds: number): string => {
 
 export async function parsePDFFile(file: File) {
   try {
-    const pdfjsLib = await import("pdfjs-dist");
+    const pdfjsLib = await import("pdfjs-dist"); //Import the pdfjs-dist library to parse the PDF file
 
     if (typeof window !== "undefined") {
+      //Check if the code is running in a browser environment
       pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
         "pdfjs-dist/build/pdf.worker.min.mjs",
         import.meta.url,
@@ -102,31 +104,24 @@ export async function parsePDFFile(file: File) {
     }
 
     // Read file as array buffer
-    const arrayBuffer = await file.arrayBuffer();
-
-export async function parsePDFFile(file: File) {
-  let pdfDocument: Awaited<
-    ReturnType<Awaited<ReturnType<typeof import("pdfjs-dist")>["getDocument"]>["promise"]>
-  > | null = null;
-  try {
-    const pdfjsLib = await import("pdfjs-dist");
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer(); //Read the file as an array buffer
 
     // Load PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    pdfDocument = await loadingTask.promise;
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer }); //Load the PDF document
+    const pdfDocument = await loadingTask.promise; //Wait for the PDF document to load
 
     // Render first page as cover image
-    const firstPage = await pdfDocument.getPage(1);
+    const firstPage = await pdfDocument.getPage(1); //Get the first page of the PDF document
     const viewport = firstPage.getViewport({ scale: 2 }); // 2x scale for better quality
 
-    const canvas = document.createElement("canvas");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const context = canvas.getContext("2d");
+    const canvas = document.createElement("canvas"); //Create a canvas element to render the PDF page
+    canvas.width = viewport.width; //Set the width of the canvas
+    canvas.height = viewport.height; //Set the height of the canvas
+    const context = canvas.getContext("2d"); //Get the 2D rendering context for the canvas
 
     if (!context) {
-      throw new Error("Could not get canvas context");
+      //Check if the context is valid
+      throw new Error("Could not get canvas context"); //Throw an error if the context is not valid
     }
 
     await firstPage.render({
@@ -142,33 +137,19 @@ export async function parsePDFFile(file: File) {
     let fullText = "";
 
     for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum);
-      const textContent = await page.getTextContent();
+      //Loop through all the pages of the PDF document
+      const page = await pdfDocument.getPage(pageNum); //Get the current page
+      const textContent = await page.getTextContent(); //Get the text content of the current page
       const pageText = textContent.items
-        .filter((item) => "str" in item)
-        .map((item) => (item as { str: string }).str)
-        .join(" ");
-      fullText += pageText + "\n";
+        .filter((item) => "str" in item) //Filter out items that do not have the str property
+        .map((item) => (item as { str: string }).str) //Map the items to their str property
+        .join(" "); //Join the items to create a segment
+      fullText += pageText + "\n"; //Add the segment to the full text
     }
 
-    // Split text into segments for search
-    const segments = splitIntoSegments(fullText);
+    const segments = splitIntoSegments(fullText); //Split the full text into segments
 
-    return {
-      content: segments,
-      cover: coverDataURL,
-    };
-  } catch (error) {
-    console.error("Error parsing PDF:", error);
-    throw new Error(
-      `Failed to parse PDF file: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  } finally {
-    if (pdfDocument) {
-      await pdfDocument.destroy();
-    }
-  }
-}
+    await pdfDocument.destroy(); //Destroy the PDF document
 
     return {
       content: segments,
