@@ -197,6 +197,14 @@ export const searchBookSegments = async (
 
     console.log(`Searching for: "${query}" in book ${bookId}`);
 
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return {
+        success: false,
+        error: "Invalid book id",
+        data: [],
+      };
+    }
+
     const bookObjectId = new mongoose.Types.ObjectId(bookId);
 
     // Try MongoDB text search first (requires text index)
@@ -218,16 +226,19 @@ export const searchBookSegments = async (
     // Fallback: regex search matching ANY keyword
     if (segments.length === 0) {
       const keywords = query.split(/\s+/).filter((k) => k.length > 2);
-      const pattern = keywords.map(escapeRegex).join("|");
 
-      segments = await BookSegment.find({
-        bookId: bookObjectId,
-        content: { $regex: pattern, $options: "i" },
-      })
-        .select("_id bookId content segmentIndex pageNumber wordCount")
-        .sort({ segmentIndex: 1 })
-        .limit(limit)
-        .lean();
+      if (keywords.length > 0) {
+        const pattern = keywords.map(escapeRegex).join("|");
+
+        segments = await BookSegment.find({
+          bookId: bookObjectId,
+          content: { $regex: pattern, $options: "i" },
+        })
+          .select("_id bookId content segmentIndex pageNumber wordCount")
+          .sort({ segmentIndex: 1 })
+          .limit(limit)
+          .lean();
+      }
     }
 
     console.log(`Search complete. Found ${segments.length} results`);

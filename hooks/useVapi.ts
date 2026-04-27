@@ -53,7 +53,7 @@ export type CallStatus =
 
 export function useVapi(book: IBook) {
   const { userId } = useAuth();
-  const { limits } = useSubscription();
+  const { limits, isLoaded } = useSubscription();
 
   const [status, setStatus] = useState<CallStatus>("idle");
   const [messages, setMessages] = useState<Messages[]>([]);
@@ -71,7 +71,7 @@ export function useVapi(book: IBook) {
   // Keep refs in sync with latest values for use in callbacks
   const maxDurationSeconds = limits?.maxDurationPerSession
     ? limits.maxDurationPerSession * 60
-    : 15 * 60;
+    : 5 * 60;
   const maxDurationRef = useLatestRef(maxDurationSeconds);
   const durationRef = useLatestRef(duration);
   const voice = book.persona || DEFAULT_VOICE;
@@ -267,6 +267,11 @@ export function useVapi(book: IBook) {
   }, []);
 
   const start = useCallback(async () => {
+    if (!isLoaded) {
+      setLimitError("Loading your subscription details. Please try again.");
+      return;
+    }
+
     if (!userId) {
       setLimitError("Please sign in to start a voice session.");
       return;
@@ -317,7 +322,7 @@ export function useVapi(book: IBook) {
       setStatus("idle");
       setLimitError("Failed to start voice session. Please try again.");
     }
-  }, [book._id, book.title, book.author, voice, userId]);
+  }, [book._id, book.title, book.author, voice, userId, isLoaded]);
 
   const stop = useCallback(() => {
     isStoppingRef.current = true;
